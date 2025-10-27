@@ -1,27 +1,24 @@
+import os
+from dotenv import load_dotenv
 import requests
 import pandas as pd
+from datetime import datetime
+import math
+
 
 # << ------------------ Build out params for our API call
 # Coordinates for spots
 SURF_SPOT_LOCATIONS = {
-    "Perranporth": {"latitude": 50.4165, "longitude": -5.071},
+    "Perranporth": {"latitude": 50.4165, "longitude": -5.071, 'tide_key': '0546A'},
     "Porthleven": {"latitude": 50.06267, "longitude": -5.30733},
     "Praa Sands": {"latitude": 50.1019, "longitude": -5.3945},
     "Porthmeor": {"latitude": 50.2160, "longitude": -5.5363},
     "Swanpool": {"latitude": 50.1415, "longitude": -5.0712}
 }
 
-
-def convert_msl_to_cd(spot_name, tide_val):
-    print(f'Converting tide height MSL: {tide_val}')
-    msl_cd_offset = {'Perranporth': 2.2,
-                     "Porthleven": 2.3,
-                     "Praa Sands": 2.3,
-                     "Porthmeor": 2.2,
-                     'Swanpool': 2.1}
-    offset = msl_cd_offset[spot_name]
-    print(f'CD: {tide_val + offset}')
-    return tide_val + offset
+from dotenv import load_dotenv
+load_dotenv()   # reads .env
+api_key = os.getenv("SUPER_SECRET_API_KEY")
 
 
 def build_curr_api_params(spot_name):
@@ -31,8 +28,14 @@ def build_curr_api_params(spot_name):
     lat = SURF_SPOT_LOCATIONS[spot_name]['latitude']
     long = SURF_SPOT_LOCATIONS[spot_name]['longitude']
     swell_params = build_current_swell_params(lat, long)  # << ------------ Get the swell params
-    wind_params = build_current_wind_params(lat, long)  # << -------------- Get the wind params
-    return swell_params, wind_params
+    wind_params = build_current_wind_params(lat, long)    # << ------------ Get the wind params
+    tide_params = build_curr_tide_params(spot_name)       # << ------------ Get the tide params
+    return swell_params, wind_params, tide_params
+
+
+def build_curr_tide_params(spot):
+    id = SURF_SPOT_LOCATIONS[spot]['tide_key']
+    return id
 
 
 def build_current_wind_params(lat_val, long_val):
@@ -58,12 +61,27 @@ def build_current_swell_params(lat_val, long_val):
 
 
 def extract_current_data(params_tuple):
-    """Takes a tuple of params and queries the APIs via separate functions for wind and swell.
+    """Takes a tuple of params and queries the APIs via separate functions for wind, swell and tides.
     Returns the response objects as a tuple."""
-    swell_params, wind_params = params_tuple  # Unpack Tuple
-    swell_response_obj = extract_current_swell_data(swell_params)
-    wind_response_obj = extract_current_wind_data(wind_params)
-    return swell_response_obj, wind_response_obj
+    swell_params, wind_params, tide_params = params_tuple  # Unpack Tuple
+    swell_response_obj = extract_current_swell_data(swell_params)  # Swell API query
+    wind_response_obj = extract_current_wind_data(wind_params)  # Wind API Query
+    tide_response_obj = extract_current_tide_data(tide_params)
+    return swell_response_obj, wind_response_obj, tide_response_obj
+
+
+def extract_current_tide_data(spot_id):
+    try:
+        url = "https://admiraltyapi.azure-api.net/uktidalapi/api/V1/Stations/0546A/TidalEvents?duration=1"
+        headers = {
+            'Cache-Control': 'no-cache',
+            'Ocp-Apim-Subscription-Key': api_key,
+        }
+        response = requests.get(url, headers=headers)
+        # print("Status code:", response.status_code)
+        return response
+    except Exception as e:
+        print("Error:", e)
 
 
 def extract_current_swell_data(some_params):
@@ -82,13 +100,55 @@ def extract_current_wind_data(some_params):
     return wind_response
 
 
-def transform_curr_api_responses(Curr_api_resp_tuple, spot):
+def transform_curr_api_responses(curr_api_resp_tuple, spot):
     print(f"...TRANSFORMING API RESPONSES...")
-    swell_resp, wind_resp = Curr_api_resp_tuple  # Unpack Tuple
+    swell_resp, wind_resp, tide_resp = curr_api_resp_tuple  # Unpack Tuple
     swell_df = transform_curr_swell_response(swell_resp, spot)
     wind_df = transform_curr_wind_response(wind_resp, spot)
+    tide_df = transform_curr_tide_response(tide_resp, spot)
     print(f"Got to the end!")
-    return swell_df, wind_df
+    return swell_df, wind_df, tide_df
+
+
+def transform_curr_tide_response(resp, spot):
+    resp_data = resp.json()
+    now = datetime.now()
+    print(f"Current time: {now}\n")
+
+    prev_tide = None
+    next_tide = None
+
+    # Loop through all tides to find prev and next
+    for tide in resp_data:
+        tide_time = datetime.fromisoformat(tide['DateTime'])
+        if tide_time <= now:
+            prev_tide = {
+                "type": tide['EventType'],
+                "height": tide['Height'],
+                "time": tide_time
+            }
+        elif tide_time > now and next_tide is None:
+            next_tide = {
+                "type": tide['EventType'],
+                "height": tide['Height'],
+                "time": tide_time
+            }
+
+    if prev_tide and next_tide:
+        print(f"Previous tide: {prev_tide['height']} ({prev_tide['type']}) at {prev_tide['time']}")
+        print(f"Next tide: {next_tide['height']} ({next_tide['type']}) at {next_tide['time']}")
+
+        # Sinusoidal interpolation
+        time_elapsed = (now - prev_tide['time']).total_seconds()
+        total_tide_time = (next_tide['time'] - prev_tide['time']).total_seconds()
+        height_diff = next_tide['height'] - prev_tide['height']
+
+        current_height = prev_tide['height'] + (height_diff / 2) * (
+                    1 - math.cos(math.pi * time_elapsed / total_tide_time))
+        print(f"Estimated current tide height: {current_height:.2f}")
+        return current_height
+    else:
+        print("Could not determine previous or next tide.")
 
 
 def transform_curr_wind_response(wind_resp, spot):
@@ -114,9 +174,6 @@ def transform_curr_swell_response(response_obj, spot):
     response_data = response_obj.json()  # Use the pandas built in functionality to hopefully make sense of the JSON
     wave_data = response_data['current']
     unit_data = response_data['current_units']
-    # Convert tide heights from msl to cd
-    msl = wave_data['sea_level_height_msl']
-    cd = convert_msl_to_cd(spot, msl)
     combined_data = {
         "wave_height": wave_data['swell_wave_height'],
         "wave_height_unit": unit_data['swell_wave_height'],
@@ -125,9 +182,7 @@ def transform_curr_swell_response(response_obj, spot):
         "wave_period": wave_data['swell_wave_period'],
         "wave_period_unit": unit_data['swell_wave_period'],
         "water_temperature": wave_data['sea_surface_temperature'],
-        "water_temperature_unit": unit_data['sea_surface_temperature'],
-        "tide_height": cd,
-        "tide_height_unit": unit_data['sea_level_height_msl']
+        "water_temperature_unit": unit_data['sea_surface_temperature']
     }
     print(combined_data)
     combined_df = pd.DataFrame(data=combined_data, index=[0])
