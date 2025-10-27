@@ -1,15 +1,23 @@
 import requests
 import pandas as pd
 from datetime import datetime, timezone
+# using stdlib
+import os
+api_key = os.getenv("MY_API_KEY")
+
+# or using python-dotenv (pip install python-dotenv)
+from dotenv import load_dotenv
+load_dotenv()   # reads .env
+api_key = os.getenv("SUPER_SECRET_API_KEY")
 
 ########### Python 3.2 #############
 
 # try:
-#     url = "https://admiraltyapi.azure-api.net/uktidalapi/api/V1/Stations?name=Perranporth"
+#     url = SUPER_SECRET_API_KEY
 #
 #     headers = {
 #         'Cache-Control': 'no-cache',
-#         'Ocp-Apim-Subscription-Key': '48b133a1515444799475705e526a4e34',
+#         'Ocp-Apim-Subscription-Key': api_key,
 #     }
 #
 #     response = requests.get(url, headers=headers)
@@ -33,7 +41,7 @@ try:
     url = "https://admiraltyapi.azure-api.net/uktidalapi/api/V1/Stations/0546A/TidalEvents?duration=1"
     headers = {
         'Cache-Control': 'no-cache',
-        'Ocp-Apim-Subscription-Key': '48b133a1515444799475705e526a4e34',
+        'Ocp-Apim-Subscription-Key': api_key,
     }
 
     response = requests.get(url, headers=headers)
