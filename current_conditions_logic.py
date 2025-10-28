@@ -8,7 +8,9 @@ import pandas as pd
 #  - Optimal Tide
 #  - Optimal Swell size/Power
 
-# -- >> Should this be housed in a DB? Probably good for future? For now can just keep in a dictionary?
+# Need to first take in the different DataFrames and move them into one DF ->
+#  At this point probably COULD put into a Database and then query this
+
 def wind_relative_to_spot(spot, wind_dir):
     relative_wind_dir = ((wind_dir - spot['orientation']) + 360) % 360
     if relative_wind_dir > 315 or relative_wind_dir < 45:
@@ -18,14 +20,16 @@ def wind_relative_to_spot(spot, wind_dir):
     else:
         return "Onshore"
 
-def wave_power(self, wave_height, wave_period):
+
+def wave_power(wave_height, wave_period):
     # Rough wave power per meter of wave front (KJ/m)
     rho = 1025  # kg/m³
     g = 9.81  # m/s²
     power = (rho * g ** 2 / (64 * 3.1416)) * wave_height ** 2 * wave_period
     return power
 
-def is_wave_power_in_sweetspot(self, wave_height, wave_period):
+
+def is_wave_power_in_sweetspot(wave_height, wave_period):
     power = self.wave_power(wave_height, wave_period)
     if power > self.max_power or power < self.min_power:
         return False

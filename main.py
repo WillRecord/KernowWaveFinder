@@ -4,7 +4,8 @@ import requests
 import pandas as pd
 from datetime import datetime
 import math
-
+from dotenv import load_dotenv
+import logging
 
 # << ------------------ Build out params for our API call
 # Coordinates for spots
@@ -16,7 +17,10 @@ SURF_SPOT_LOCATIONS = {
     "Swanpool": {"latitude": 50.1415, "longitude": -5.0712}
 }
 
-from dotenv import load_dotenv
+
+logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
+
+
 load_dotenv()   # reads .env
 api_key = os.getenv("SUPER_SECRET_API_KEY")
 
@@ -24,6 +28,7 @@ api_key = os.getenv("SUPER_SECRET_API_KEY")
 def build_curr_api_params(spot_name):
     """Builds out parameters for all our API calls using the spotname to query the dictionary and then returning the
     params in a tuple"""
+    logging.info("... Building API Parameters and Headers ...")
     # Get LATITUDE and LONGITUDE spot values from dictionary to use in params
     lat = SURF_SPOT_LOCATIONS[spot_name]['latitude']
     long = SURF_SPOT_LOCATIONS[spot_name]['longitude']
@@ -63,14 +68,17 @@ def build_current_swell_params(lat_val, long_val):
 def extract_current_data(params_tuple):
     """Takes a tuple of params and queries the APIs via separate functions for wind, swell and tides.
     Returns the response objects as a tuple."""
+    logging.info("... STARTING EXTRACT ...")
     swell_params, wind_params, tide_params = params_tuple  # Unpack Tuple
     swell_response_obj = extract_current_swell_data(swell_params)  # Swell API query
     wind_response_obj = extract_current_wind_data(wind_params)  # Wind API Query
     tide_response_obj = extract_current_tide_data(tide_params)
+    logging.info("... EXTRACT COMPLETE ...")
     return swell_response_obj, wind_response_obj, tide_response_obj
 
 
 def extract_current_tide_data(spot_id):
+    logging.info("Extracting current tide data.")
     try:
         url = "https://admiraltyapi.azure-api.net/uktidalapi/api/V1/Stations/0546A/TidalEvents?duration=1"
         headers = {
@@ -78,42 +86,42 @@ def extract_current_tide_data(spot_id):
             'Ocp-Apim-Subscription-Key': api_key,
         }
         response = requests.get(url, headers=headers)
-        # print("Status code:", response.status_code)
+        logging.info(f"Current Tide API response code: {response.status_code}")
         return response
     except Exception as e:
         print("Error:", e)
 
 
 def extract_current_swell_data(some_params):
-    print(f"...Extracting current swell data..")
+    logging.info("Extracting current swell data.")
     # Pass the API URL to the get function
     swell_response = requests.get('https://marine-api.open-meteo.com/v1/marine', params=some_params)
-    print(f"Current Swell API response code: {swell_response.status_code}")
+    logging.info(f"Current Swell API response code: {swell_response.status_code}")
     return swell_response
 
 
 def extract_current_wind_data(some_params):
-    print(f"...Extracting current wind data..")
+    logging.info("Extracting current wind data.")
     # # Pass the API URL to the get function
     wind_response = requests.get("https://api.open-meteo.com/v1/forecast", params=some_params)
-    print(f"Current Wind API response code: {wind_response.status_code}")
+    logging.info(f"Current Swell API response code: {wind_response.status_code}")
     return wind_response
 
 
 def transform_curr_api_responses(curr_api_resp_tuple, spot):
-    print(f"...TRANSFORMING API RESPONSES...")
+    logging.info(f"...TRANSFORMING API RESPONSES...")
     swell_resp, wind_resp, tide_resp = curr_api_resp_tuple  # Unpack Tuple
     swell_df = transform_curr_swell_response(swell_resp, spot)
     wind_df = transform_curr_wind_response(wind_resp, spot)
     tide_df = transform_curr_tide_response(tide_resp, spot)
-    print(f"Got to the end!")
+    logging.info(f"...TRANSFORM COMPLETE...")
     return swell_df, wind_df, tide_df
 
 
 def transform_curr_tide_response(resp, spot):
     resp_data = resp.json()
     now = datetime.now()
-    print(f"Current time: {now}\n")
+    logging.debug(f"Current time now is: {now}")
 
     prev_tide = None
     next_tide = None
@@ -135,8 +143,8 @@ def transform_curr_tide_response(resp, spot):
             }
 
     if prev_tide and next_tide:
-        print(f"Previous tide: {prev_tide['height']} ({prev_tide['type']}) at {prev_tide['time']}")
-        print(f"Next tide: {next_tide['height']} ({next_tide['type']}) at {next_tide['time']}")
+        logging.debug(f"Previous tide: {prev_tide['height']} ({prev_tide['type']}) at {prev_tide['time']}")
+        logging.debug(f"Next tide: {next_tide['height']} ({next_tide['type']}) at {next_tide['time']}")
 
         # Sinusoidal interpolation
         time_elapsed = (now - prev_tide['time']).total_seconds()
@@ -145,10 +153,10 @@ def transform_curr_tide_response(resp, spot):
 
         current_height = prev_tide['height'] + (height_diff / 2) * (
                     1 - math.cos(math.pi * time_elapsed / total_tide_time))
-        print(f"Estimated current tide height: {current_height:.2f}")
+        logging.debug(f"Estimated current tide height: {current_height:.2f}")
         return current_height
     else:
-        print("Could not determine previous or next tide.")
+        logging.debug("Could not determine previous or next tide.")
 
 
 def transform_curr_wind_response(wind_resp, spot):
@@ -163,14 +171,12 @@ def transform_curr_wind_response(wind_resp, spot):
         "wind_gusts": wind_data['wind_gusts_10m'],
         "wind_gusts_unit": wind_units['wind_gusts_10m']
     }
-    print(combined_data)
     combined_df = pd.DataFrame(data=combined_data, index=[0])
-    print(combined_df)
     return combined_df
 
 
 def transform_curr_swell_response(response_obj, spot):
-    print(f"...Transforming..")
+    logging.info(f"Transforming swell response")
     response_data = response_obj.json()  # Use the pandas built in functionality to hopefully make sense of the JSON
     wave_data = response_data['current']
     unit_data = response_data['current_units']
@@ -184,7 +190,6 @@ def transform_curr_swell_response(response_obj, spot):
         "water_temperature": wave_data['sea_surface_temperature'],
         "water_temperature_unit": unit_data['sea_surface_temperature']
     }
-    print(combined_data)
     combined_df = pd.DataFrame(data=combined_data, index=[0])
     return combined_df
 
