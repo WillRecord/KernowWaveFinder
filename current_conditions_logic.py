@@ -8,8 +8,13 @@ import pandas as pd
 #  - Optimal Tide
 #  - Optimal Swell size/Power
 
-# Need to first take in the different DataFrames and move them into one DF ->
 #  At this point probably COULD put into a Database and then query this
+# Reference indiex of dataframe columns
+# 'wave_height', 'wave_height_unit', 'wave_direction',
+#        'wave_direction_unit', 'wave_period', 'wave_period_unit',
+#        'water_temperature', 'water_temperature_unit', 'wind_speed',
+#        'wind_speed_unit', 'wind_direction', 'wind_direction_unit',
+#        'wind_gusts', 'wind_gusts_unit', 'Curr_tide_height'
 
 def wind_relative_to_spot(spot, wind_dir):
     relative_wind_dir = ((wind_dir - spot['orientation']) + 360) % 360

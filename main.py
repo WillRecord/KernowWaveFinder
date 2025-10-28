@@ -28,7 +28,7 @@ api_key = os.getenv("SUPER_SECRET_API_KEY")
 def build_curr_api_params(spot_name):
     """Builds out parameters for all our API calls using the spotname to query the dictionary and then returning the
     params in a tuple"""
-    logging.info("... Building API Parameters and Headers ...")
+    logging.info("... << ---- Building API Parameters and Headers --- >> ...")
     # Get LATITUDE and LONGITUDE spot values from dictionary to use in params
     lat = SURF_SPOT_LOCATIONS[spot_name]['latitude']
     long = SURF_SPOT_LOCATIONS[spot_name]['longitude']
@@ -68,12 +68,12 @@ def build_current_swell_params(lat_val, long_val):
 def extract_current_data(params_tuple):
     """Takes a tuple of params and queries the APIs via separate functions for wind, swell and tides.
     Returns the response objects as a tuple."""
-    logging.info("... STARTING EXTRACT ...")
+    logging.info("... << ---- STARTING EXTRACT ---- >> ...")
     swell_params, wind_params, tide_params = params_tuple  # Unpack Tuple
     swell_response_obj = extract_current_swell_data(swell_params)  # Swell API query
     wind_response_obj = extract_current_wind_data(wind_params)  # Wind API Query
     tide_response_obj = extract_current_tide_data(tide_params)
-    logging.info("... EXTRACT COMPLETE ...")
+    logging.info("... << ---- EXTRACT COMPLETE ---- >> ...")
     return swell_response_obj, wind_response_obj, tide_response_obj
 
 
@@ -109,13 +109,15 @@ def extract_current_wind_data(some_params):
 
 
 def transform_curr_api_responses(curr_api_resp_tuple, spot):
-    logging.info(f"...TRANSFORMING API RESPONSES...")
+    logging.info(f"... << ---- TRANSFORMING API RESPONSES ---- >> ...")
     swell_resp, wind_resp, tide_resp = curr_api_resp_tuple  # Unpack Tuple
+    # Get all the DataFrames nicely formatted
     swell_df = transform_curr_swell_response(swell_resp, spot)
     wind_df = transform_curr_wind_response(wind_resp, spot)
     tide_df = transform_curr_tide_response(tide_resp, spot)
-    logging.info(f"...TRANSFORM COMPLETE...")
-    return swell_df, wind_df, tide_df
+    combined_df = pd.concat([swell_df, wind_df, tide_df], axis=1)  # Combine all the DataFrames
+    logging.info(f"... << ---- TRANSFORM COMPLETE combined df has shape {combined_df.shape} ---- >> ...")
+    return combined_df
 
 
 def transform_curr_tide_response(resp, spot):
@@ -154,7 +156,9 @@ def transform_curr_tide_response(resp, spot):
         current_height = prev_tide['height'] + (height_diff / 2) * (
                     1 - math.cos(math.pi * time_elapsed / total_tide_time))
         logging.debug(f"Estimated current tide height: {current_height:.2f}")
-        return current_height
+        tide_dict = {'Curr_tide_height': current_height}  # Put in a dictionary
+        tide_df = pd.DataFrame(tide_dict, index=[0])
+        return tide_df
     else:
         logging.debug("Could not determine previous or next tide.")
 
@@ -198,3 +202,4 @@ spot_name = 'Perranporth'
 params_tup = build_curr_api_params(spot_name)
 response_tuple = extract_current_data(params_tup)
 df_result = transform_curr_api_responses(response_tuple, spot_name)
+print(df_result.columns)
