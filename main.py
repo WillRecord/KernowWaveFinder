@@ -111,10 +111,27 @@ def extract_current_wind_data(some_params):
 def transform_curr_api_responses(curr_api_resp_tuple, spot):
     logging.info(f"... << ---- TRANSFORMING API RESPONSES ---- >> ...")
     swell_resp, wind_resp, tide_resp = curr_api_resp_tuple  # Unpack Tuple
+
     # Get all the DataFrames nicely formatted
+    # Swell
     swell_df = transform_curr_swell_response(swell_resp, spot)
+    if not isinstance(swell_df, pd.DataFrame):
+        logging.error("transform_curr_swell_response() did not return a DataFrame.")
+        raise TypeError("transform_curr_swell_response() must return a DataFrame")
+
+    # Wind
     wind_df = transform_curr_wind_response(wind_resp, spot)
+    if not isinstance(wind_df, pd.DataFrame):
+        logging.error("transform_curr_wind_response() did not return a DataFrame.")
+        raise TypeError("transform_curr_wind_response() must return a DataFrame")
+
+    # Tide
     tide_df = transform_curr_tide_response(tide_resp, spot)
+    if not isinstance(tide_df, pd.DataFrame):
+        logging.error("transform_curr_tide_response() did not return a DataFrame.")
+        raise TypeError("transform_curr_tide_response() must return a DataFrame")
+
+    # Combine them all
     combined_df = pd.concat([swell_df, wind_df, tide_df], axis=1)  # Combine all the DataFrames
     logging.info(f"... << ---- TRANSFORM COMPLETE combined df has shape {combined_df.shape} ---- >> ...")
     return combined_df
@@ -202,4 +219,5 @@ spot_name = 'Perranporth'
 params_tup = build_curr_api_params(spot_name)
 response_tuple = extract_current_data(params_tup)
 df_result = transform_curr_api_responses(response_tuple, spot_name)
+print(df_result.to_dict(orient='records'))
 print(df_result.columns)

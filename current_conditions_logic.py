@@ -2,67 +2,152 @@ import pandas as pd
 
 SURF_SPOT_LOCATIONS = {
     "Perranporth": {"latitude": 50.4165, "longitude": -5.071, 'tide_key': '0546A',
-                    'optimal_wind_dir': 290, 'optimal_swell_dir': 110, 'swell_range_low': 50,
-                    'swell_range_high': 500, 'tidal_range_low': 0, 'tidal_range_high': 7},
+                    'optimal_wind_dir': 110, 'optimal_swell_dir': 290,
+                    'swell_range_low': 50, 'swell_range_high': 500,
+                    'tidal_range_low': 0, 'tidal_range_high': 7},
     "Porthleven": {"latitude": 50.06267, "longitude": -5.30733, 'tide_key': 'X',
-                   'optimal_wind_dir': 220, 'optimal_swell_dir': 40, 'swell_range': '50-1000',
+                   'optimal_wind_dir': 40, 'optimal_swell_dir': 220,
+                   'swell_range': '50-1000',
                    'tidal_range_low': 1, 'tidal_range_high': 5},
     "Praa Sands": {"latitude": 50.1019, "longitude": -5.3945, 'tide_key': 'X',
-                   'optimal_wind_dir': 220, 'optimal_swell_dir': 40, 'swell_range': '100-700',
+                   'optimal_wind_dir': 40, 'optimal_swell_dir': 220,
+                   'swell_range': '100-700',
                    'tidal_range_low': 0, 'tidal_range_high': 4.5},
     "Porthmeor": {"latitude": 50.2160, "longitude": -5.5363, 'tide_key': 'X',
-                  'optimal_wind_dir': 290, 'optimal_swell_dir': 110, 'swell_range': '400-2000',
+                  'optimal_wind_dir': 110, 'optimal_swell_dir': 290,
+                  'swell_range': '400-2000',
                   'tidal_range_low': 0, 'tidal_range_high': 4},
     "Swanpool": {"latitude": 50.1415, "longitude": -5.0712, 'tide_key': 'X',
-                 'optimal_wind_dir': 140, 'optimal_swell_dir': 320, 'swell_range': '50-10000',
+                 'optimal_wind_dir': 320, 'optimal_swell_dir': 140,
+                 'swell_range': '50-10000',
                  'tidal_range_low': 1, 'tidal_range_high': 3.5}
 }
 
+# Test Data
+example_test_data = {'wave_height': 0.7, 'wave_height_unit': 'm',
+                     'wave_direction': 215, 'wave_direction_unit': '°',
+                     'wave_period': 6.65, 'wave_period_unit': 's',
+                     'water_temperature': 13.6, 'water_temperature_unit': '°C',
+                     'wind_speed': 19.0, 'wind_speed_unit': 'mp/h',
+                     'wind_direction': 277, 'wind_direction_unit': '°',
+                     'wind_gusts': 31.1, 'wind_gusts_unit': 'mp/h',
+                     'Curr_tide_height': 5.669016004113615}
 
-# To do this we need to house some information about optimal conditions for spots including;
-#  - Optimal swell direction ✅
-#  - Optimal wind direction ✅
-#  - Optimal Tidal range ✅
-#  - Optimal Swell size/Power ✅
-
-# Reference index of dataframe columns
-# 'wave_height', 'wave_height_unit', 'wave_direction',
-#        'wave_direction_unit', 'wave_period', 'wave_period_unit',
-#        'water_temperature', 'water_temperature_unit', 'wind_speed',
-#        'wind_speed_unit', 'wind_direction', 'wind_direction_unit',
-#        'wind_gusts', 'wind_gusts_unit', 'Curr_tide_height'
-
-def rate_curr_spot(spot_df):
-    # Need to take the current wave DataFrame and parse it to rate and order spots
-    pass
+example_test_df = pd.DataFrame(example_test_data, index=[0])
 
 
-def wind_relative_to_spot(spot, wind_dir):
-    relative_wind_dir = ((wind_dir - spot['orientation']) + 360) % 360
-    if relative_wind_dir > 315 or relative_wind_dir < 45:
-        return "Offshore"
-    elif (45 < relative_wind_dir < 135) or (225 < relative_wind_dir < 315):
-        return "Cross-off"
+# << ================================ HELPER FUNCTIONS ================================ >>
+
+def wind_relative_to_spot(spot, wind_dir, wind_mph, debug=True):
+    """Gives the wind a rating from 0 to 5 and returns label for direction e,g, offshore as a string"""
+    wind_score = 0  # Variable to track the wind score
+    # Angle between current wind and optimal direction for offshore
+    wind_diff = abs((wind_dir - spot['optimal_wind_dir'] + 180) % 360 - 180)
+    # Verbose mode: print debug info
+    if debug:
+        print(f"Spot row: {spot}")
+        print(f"Optimal wind dir: {spot['optimal_wind_dir']}°")
+        print(f"Current wind dir: {wind_dir}°")
+        print(f"Difference: {wind_diff:.1f}°")
+    # Determine scoring and category
+    if wind_diff <= 45:
+        direction = "Offshore"
+        wind_score = 5
+        if wind_mph > 40:  # Adjust for strong off-shores
+            wind_score -= 1
+        elif wind_mph > 20:  # Adjust for strong off-shores
+            wind_score -= 0.5
+    elif wind_diff <= 90:
+        direction = "Cross-off"
+        wind_score = 3
+        if wind_mph > 40:  # Adjust for strong off-shores
+            wind_score -= 1
+        elif wind_mph > 20:  # Adjust for strong off-shores
+            wind_score -= 0.5
     else:
-        return "Onshore"
+        direction = "Onshore"
+        wind_score = 1
+        if wind_mph > 20:  # Adjust for strong crap conditions
+            wind_score -= 1
+        elif wind_mph > 15:  # Adjust for strong on-shores
+            wind_score -= 0.5
 
+    if debug:
+        print(f"Wind is: {wind_mph}mph {direction} scoring given is {wind_score}/5\n")
 
-def wave_power(wave_height, wave_period):
-    # Rough wave power per meter of wave front (KJ/m)
-    rho = 1025  # kg/m³
-    g = 9.81  # m/s²
-    power = (rho * g ** 2 / (64 * 3.1416)) * wave_height ** 2 * wave_period
-    return power
+    return direction, wind_score
 
-
-def is_wave_power_in_sweetspot(df):
-    power = wave_power(df['wave_height'], df['wave_direction'])
-    if power > df['max_power'] or power < df['']:
-        return False
+def wave_period_rating(wave_period):
+    """Rates wave period from 1-5"""
+    if wave_period < 6:
+        period_rating = 1  # short-period wind swell
+    elif wave_period < 8:
+        period_rating = 2
+    elif wave_period < 10:
+        period_rating = 3
+    elif wave_period < 12:
+        period_rating = 4
     else:
-        return True
+        period_rating = 5  # long-period ground swell
+    print(f"Wave period is {wave_period}, given rating of {period_rating}/5")
+    return period_rating
 
-def rate_curr_conditions(df):
-    # If the direction of the swell is outside the range -> 0 stars as wave won't break
-    # If the direction of the wind is offshore
-    pass
+
+def wave_height_rating(height):
+    """Provides a cap for how good the score can be based on the wave size"""
+    if height < 1:
+        size_cap = 2  # almost flat
+    elif height < 3:
+        size_cap = 7  # small fun waves
+    elif height < 4:
+        size_cap = 9  # getting solid size
+    else:
+        size_cap = 10  # solid/scary
+    return size_cap
+
+
+def tide_penalty(spot, tide):
+    """If tide is too high or too low provides a penalty to then be applied to the score"""
+    if tide < spot['tidal_range_low'] or tide > spot['tidal_range_high']:
+        tide_penalty = -1.5  # tide too high or too low hurts quality
+    else:
+        tide_penalty = 0  # within working range
+
+    return tide_penalty
+
+
+def rate_curr_spot(spot, row):
+    """Logic to rate spots current conditions"""
+    # << ------------------- Get Factors from helper functions
+    wind_dir, wind_score = wind_relative_to_spot(spot, row['wind_direction'], row['wind_speed'])  # 1. Wind dir score
+    period_score = wave_period_rating(row['wave_period'])                                       # 2. Wave period score
+    size_cap = wave_height_rating(row['wave_height'])                                           # 3. Wave height score
+    tide_adj = tide_penalty(spot, row['Curr_tide_height'])                                  # 4. Tide adjustment factor
+
+    # Algorithm to rate is a Weighted combination of the above factors (wind_score is 50% whilst period is 30%)
+    raw_score = (wind_score * 0.5) + (period_score * 0.3) + 2
+    adjusted_score = raw_score + tide_adj                                                     # Then we adjust for tide
+    final_score = max(0, min(size_cap, adjusted_score))                # The score is finally capped by the wave height
+
+    return round(final_score, 1)  # We then round to 1 decimal place
+
+
+spot_info = SURF_SPOT_LOCATIONS['Perranporth']
+score = rate_curr_spot(spot_info, example_test_df.iloc[0])
+print(f"Perranporth Surf Rating: {score}/10")   # TEST RUN
+
+# <<< UNFINISHED LOGIC AROUND POWER SWEETSPOT
+# def wave_power(wave_height, wave_period):
+#     # Rough wave power per meter of wave front (KJ/m)
+#     rho = 1025  # kg/m³
+#     g = 9.81  # m/s²
+#     power = (rho * g ** 2 / (64 * 3.1416)) * wave_height ** 2 * wave_period
+#     return power
+#
+#
+# def is_wave_power_in_sweetspot(df):
+#     power = wave_power(df['wave_height'], df['wave_direction'])
+#     if power > df['max_power'] or power < df['']:
+#         return False
+#     else:
+#         return True
