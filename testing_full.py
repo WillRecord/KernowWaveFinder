@@ -237,7 +237,6 @@ def transform_curr_swell_response(response_obj, spot):
 # print(df_result.to_dict(orient='records'))
 # print(df_result.columns)
 
-# Need to loop through all our
 spot = "Perranporth"
 params = build_curr_api_params(spot)
 responses = extract_current_data(params)

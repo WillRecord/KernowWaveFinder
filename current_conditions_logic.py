@@ -128,13 +128,20 @@ def rate_curr_spot(spot, row):
     raw_score = (wind_score * 0.5) + (period_score * 0.3) + 2
     adjusted_score = raw_score + tide_adj                                                     # Then we adjust for tide
     final_score = max(0, min(size_cap, adjusted_score))                # The score is finally capped by the wave height
+    final_score = round(final_score, 1)  # We then round to 1 decimal place
 
-    return round(final_score, 1)  # We then round to 1 decimal place
+    # Combine output into a dictionary
+    spot_rating_dict = {'rating': final_score,
+                        'wind_dir_str': wind_dir
+                        # 'notes':
+                        }
+
+    return spot_rating_dict
 
 
 spot_info = SURF_SPOT_LOCATIONS['Perranporth']
-score = rate_curr_spot(spot_info, example_test_df.iloc[0])
-print(f"Perranporth Surf Rating: {score}/10")   # TEST RUN
+spot_score_dict = rate_curr_spot(spot_info, example_test_df.iloc[0])
+print(f"Perranporth Surf Rating: {spot_score_dict['rating']}/10 and {spot_score_dict['wind_dir_str']} wind.")   # TEST RUN
 
 # <<< UNFINISHED LOGIC AROUND POWER SWEETSPOT
 # def wave_power(wave_height, wave_period):
