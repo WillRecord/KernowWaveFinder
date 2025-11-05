@@ -1,12 +1,10 @@
 import os
-from dotenv import load_dotenv
 import requests
-import pandas as pd
 from datetime import datetime
 import math
 from dotenv import load_dotenv
 import logging
-from current_conditions_logic import *
+from current.current_conditions_logic import *
 
 # << ------------------ Build out params for our API call
 # Coordinates for spots

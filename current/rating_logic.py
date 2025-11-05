@@ -139,9 +139,12 @@ def rate_curr_spot(spot, row):
     return spot_rating_dict
 
 
-spot_info = SURF_SPOT_LOCATIONS['Perranporth']
-spot_score_dict = rate_curr_spot(spot_info, example_test_df.iloc[0])
-print(f"Perranporth Surf Rating: {spot_score_dict['rating']}/10 and {spot_score_dict['wind_dir_str']} wind.")   # TEST RUN
+# spot_info = SURF_SPOT_LOCATIONS['Perranporth']
+# spot_score_dict = rate_curr_spot(spot_info, example_test_df.iloc[0])
+# print(f"Perranporth Surf Rating: {spot_score_dict['rating']}/10 and {spot_score_dict['wind_dir_str']} wind.")   # TEST RUN
+
+for spot in SURF_SPOT_LOCATIONS.keys():
+    print(spot)
 
 # <<< UNFINISHED LOGIC AROUND POWER SWEETSPOT
 # def wave_power(wave_height, wave_period):
