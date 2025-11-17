@@ -1,5 +1,6 @@
 import pandas as pd
 from current.constants import SURF_SPOT_LOCATIONS
+from current.pipeline.run_etl import build_curr_api_params, extract_current_data, transform_curr_api_responses
 
 # Test Data
 example_test_data = {'wave_height': 0.7, 'wave_height_unit': 'm',
@@ -120,10 +121,24 @@ def rate_curr_spot(spot, row):
 # spot_info = SURF_SPOT_LOCATIONS['Perranporth']
 # spot_score_dict = rate_curr_spot(spot_info, example_test_df.iloc[0])
 # print(f"Perranporth Surf Rating: {spot_score_dict['rating']}/10 and {spot_score_dict['wind_dir_str']} wind.")   # TEST RUN
+# Loop through the spots and call the et part of the etl for each including the rating logic
+# After each loop
+def rate_all_spots(spot, row):
+    results_listofdict = []
+    for spot_name in SURF_SPOT_LOCATIONS.keys():
+        params = build_curr_api_params(spot_name)
+        responses = extract_current_data(params)
+        df = transform_curr_api_responses(responses, spot_name)
+        print(f"Spot name is {SURF_SPOT_LOCATIONS[spot_name]}")
+        print(f"Second param is our Dataframe: \n{df}")
+        # Perform same rating logic above and add to
+        this_rating = rate_curr_spot(SURF_SPOT_LOCATIONS[spot_name], df)
+        print(f"{spot_name} Surf Rating: {this_rating['rating']}/10 ({this_rating['wind_dir_str']} wind)")
+        # Add our result to a dictionary?
+        results_listofdict.append({spot_name: this_rating})
 
-for spot in SURF_SPOT_LOCATIONS.keys():
-    print(spot)
-    print(SURF_SPOT_LOCATIONS[spot]['tide_key'])
+    print(f"FINAL RESULT:\n{results_listofdict}")
+
 
 # <<< UNFINISHED LOGIC AROUND POWER SWEETSPOT
 # def wave_power(wave_height, wave_period):

@@ -4,7 +4,9 @@ from datetime import datetime
 import math
 from dotenv import load_dotenv
 import logging
-from current.current_conditions_logic import *
+import pandas as pd
+
+from current.rating_logic import rate_curr_spot
 
 # << ------------------ Build out params for our API call
 # Coordinates for spots
@@ -239,5 +241,7 @@ spot = "Perranporth"
 params = build_curr_api_params(spot)
 responses = extract_current_data(params)
 df = transform_curr_api_responses(responses, spot)
+print(f"1st param is: {SURF_SPOT_LOCATIONS[spot]}")
+print(f"Second param is: {df.iloc[0]}")
 rating = rate_curr_spot(SURF_SPOT_LOCATIONS[spot], df.iloc[0])
 print(f"{spot} Surf Rating: {rating['rating']}/10 ({rating['wind_dir_str']} wind)")

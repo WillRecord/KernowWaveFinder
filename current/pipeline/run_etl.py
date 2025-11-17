@@ -9,6 +9,7 @@ from current.extract.swell_extractor import build_current_swell_params, extract_
 from current.transform.swell_transformer import transform_curr_swell_response
 from current.transform.tide_transformer import transform_curr_tide_response
 from current.transform.wind_transformer import transform_curr_wind_response
+from current.rating_logic import rate_all_spots
 
 
 def build_curr_api_params(spot_name):
@@ -76,5 +77,5 @@ spot = "Perranporth"
 params = build_curr_api_params(spot)
 responses = extract_current_data(params)
 df = transform_curr_api_responses(responses, spot)
-rating = rate_curr_spot(SURF_SPOT_LOCATIONS[spot], df.iloc[0])
+rating = rate_all_spots(SURF_SPOT_LOCATIONS[spot], df.iloc[0])
 print(f"{spot} Surf Rating: {rating['rating']}/10 ({rating['wind_dir_str']} wind)")
