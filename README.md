@@ -5,6 +5,7 @@ To do:
 - Add in some unit tests (assertion errors) ✅
 
 - Solve for no next tide 'Could not termine next or prev tide' 🐞
+- Circular import issue 🐞
 - Add logic to account for all this to rate the spots and order them ✅
 - Write our input Data to a SQL Database instead of a Pandas DF for persistence? - Put on hold for forecasting tool ❌
 

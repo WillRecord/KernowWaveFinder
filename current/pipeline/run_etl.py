@@ -9,7 +9,7 @@ from current.extract.swell_extractor import build_current_swell_params, extract_
 from current.transform.swell_transformer import transform_curr_swell_response
 from current.transform.tide_transformer import transform_curr_tide_response
 from current.transform.wind_transformer import transform_curr_wind_response
-from current.rating_logic import rate_all_spots
+from current.rating_logic import rate_curr_spot
 
 
 def build_curr_api_params(spot_name):
@@ -66,16 +66,35 @@ def transform_curr_api_responses(curr_api_resp_tuple, spot):
     return combined_df
 
 
-spot_name = 'Perranporth'
-params_tup = build_curr_api_params(spot_name)
-response_tuple = extract_current_data(params_tup)
-df_result = transform_curr_api_responses(response_tuple, spot_name)
-print(df_result.to_dict(orient='records'))
-print(df_result.columns)
+# spot_name = 'Perranporth'
+# params_tup = build_curr_api_params(spot_name)
+# response_tuple = extract_current_data(params_tup)
+# df_result = transform_curr_api_responses(response_tuple, spot_name)
+# print(df_result.to_dict(orient='records'))
+# print(df_result.columns)
 
-spot = "Perranporth"
-params = build_curr_api_params(spot)
-responses = extract_current_data(params)
-df = transform_curr_api_responses(responses, spot)
-rating = rate_all_spots(SURF_SPOT_LOCATIONS[spot], df.iloc[0])
-print(f"{spot} Surf Rating: {rating['rating']}/10 ({rating['wind_dir_str']} wind)")
+# spot = "Perranporth"
+# params = build_curr_api_params(spot)
+# responses = extract_current_data(params)
+# df = transform_curr_api_responses(responses, spot)
+# rating = rate_all_spots(SURF_SPOT_LOCATIONS[spot], df.iloc[0])
+# print(f"{spot} Surf Rating: {rating['rating']}/10 ({rating['wind_dir_str']} wind)")
+
+def rate_all_spots():
+    results_list_of_dicts = []
+    for spot_name in SURF_SPOT_LOCATIONS.keys():
+        params = build_curr_api_params(spot_name)
+        responses = extract_current_data(params)
+        df = transform_curr_api_responses(responses, spot_name).iloc[0]
+        print(f"Spot name is {SURF_SPOT_LOCATIONS[spot_name]}")
+        print(f"Second param is our Dataframe row?: \n{df}")
+        # Perform same rating logic above and add to
+        this_rating = rate_curr_spot(SURF_SPOT_LOCATIONS[spot_name], df)
+        print(f"{spot_name} Surf Rating: {this_rating['rating']}/10 ({this_rating['wind_dir_str']} wind)")
+        # Add our result to a dictionary?
+        results_list_of_dicts.append({spot_name: this_rating})
+
+    print(f"FINAL RESULT:\n{results_list_of_dicts}")
+
+
+rate_all_spots()
