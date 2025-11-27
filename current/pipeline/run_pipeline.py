@@ -12,6 +12,9 @@ from current.transform.wind_transformer import transform_curr_wind_response
 from current.rating_logic import rate_curr_spot
 
 
+logger = logging.getLogger(__name__)
+
+
 def build_curr_api_params(spot_name):
     """Builds out parameters for all our API calls using the spotname to query the dictionary and then returning the
     params in a tuple"""
@@ -80,21 +83,26 @@ def transform_curr_api_responses(curr_api_resp_tuple, spot):
 # rating = rate_all_spots(SURF_SPOT_LOCATIONS[spot], df.iloc[0])
 # print(f"{spot} Surf Rating: {rating['rating']}/10 ({rating['wind_dir_str']} wind)")
 
+
 def rate_all_spots():
     results_list_of_dicts = []
+
     for spot_name in SURF_SPOT_LOCATIONS.keys():
+
         params = build_curr_api_params(spot_name)
         responses = extract_current_data(params)
         df = transform_curr_api_responses(responses, spot_name).iloc[0]
-        print(f"Spot name is {SURF_SPOT_LOCATIONS[spot_name]}")
-        print(f"Second param is our Dataframe row?: \n{df}")
-        # Perform same rating logic above and add to
+
+        logger.info(f"Evaluating spot: {SURF_SPOT_LOCATIONS[spot_name]}")
+        logger.debug(f"Transformed DataFrame row for {spot_name}: {df}")
+
         this_rating = rate_curr_spot(SURF_SPOT_LOCATIONS[spot_name], df)
-        print(f"{spot_name} Surf Rating: {this_rating['rating']}/10 ({this_rating['wind_dir_str']} wind)")
-        # Add our result to a dictionary?
+
+        logger.info(
+            f"{spot_name} Surf Rating: {this_rating['rating']}/10 "
+            f"({this_rating['wind_dir_str']} wind)"
+        )
+
         results_list_of_dicts.append({spot_name: this_rating})
 
-    print(f"FINAL RESULT:\n{results_list_of_dicts}")
-
-
-rate_all_spots()
+    return results_list_of_dicts
