@@ -85,24 +85,35 @@ def transform_curr_api_responses(curr_api_resp_tuple, spot):
 
 
 def rate_all_spots():
-    results_list_of_dicts = []
+    results = []
+
+    logging.info("Starting rate_all_spots() pipeline...")
 
     for spot_name in SURF_SPOT_LOCATIONS.keys():
+        logging.info(f"Processing spot: {spot_name}")
 
         params = build_curr_api_params(spot_name)
         responses = extract_current_data(params)
-        df = transform_curr_api_responses(responses, spot_name).iloc[0]
+        df_row = transform_curr_api_responses(responses, spot_name).iloc[0]
 
-        logger.info(f"Evaluating spot: {SURF_SPOT_LOCATIONS[spot_name]}")
-        logger.debug(f"Transformed DataFrame row for {spot_name}: {df}")
+        logging.info(f"Transformed DataFrame row for {spot_name}: {df_row.to_dict()}")
 
-        this_rating = rate_curr_spot(SURF_SPOT_LOCATIONS[spot_name], df)
+        rating_results = rate_curr_spot(SURF_SPOT_LOCATIONS[spot_name], df_row)
 
-        logger.info(
-            f"{spot_name} Surf Rating: {this_rating['rating']}/10 "
-            f"({this_rating['wind_dir_str']} wind)"
+        logging.info(
+            f"{spot_name}: rating={rating_results['rating']} wind_dir={rating_results['wind_dir_str']}"
         )
 
-        results_list_of_dicts.append({spot_name: this_rating})
+        # Produce correct flat dict
+        results.append({
+            "spot_name": spot_name,
+            "rating": rating_results["rating"],
+            "wind_direction": rating_results["wind_dir_str"],
+            # Add more if they exist:
+            # "swell_height": df_row.get("swell_height"),
+            # "tide_state": df_row.get("tide_state"),
+        })
 
-    return results_list_of_dicts
+    logging.info("Completed rate_all_spots()")
+    return results
+
