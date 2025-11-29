@@ -11,6 +11,10 @@ from current.transform.tide_transformer import transform_curr_tide_response
 from current.transform.wind_transformer import transform_curr_wind_response
 from current.rating_logic import rate_curr_spot
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s [%(levelname)s] %(message)s'
+)
 
 def build_curr_api_params(spot_name):
     """Builds out parameters for all our API calls using the spotname to query the dictionary and then returning the
@@ -86,6 +90,7 @@ def rate_all_spots():
         params = build_curr_api_params(spot_name)
         responses = extract_current_data(params)
         df = transform_curr_api_responses(responses, spot_name).iloc[0]
+        print(f"DataFrame has shape {df.shape}")
         print(f"Spot name is {SURF_SPOT_LOCATIONS[spot_name]}")
         print(f"Second param is our Dataframe row?: \n{df}")
         # Perform same rating logic above and add to

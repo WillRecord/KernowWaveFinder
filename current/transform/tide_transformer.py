@@ -5,8 +5,18 @@ import math
 import pandas as pd
 
 
+def parse_iso_flexible(ts: str) -> datetime:
+    # If the timestamp has fractional seconds
+    if '.' in ts:
+        return datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S.%f")
+    # No fractional seconds
+    return datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S")
+
+
 def transform_curr_tide_response(resp, spot):
     resp_data = resp.json()
+    resp_data.sort(key=lambda t: parse_iso_flexible(t["DateTime"]))  # Check that the tides are in order
+
     now = datetime.now()
     logging.debug(f"Current time now is: {now}")
 
@@ -15,7 +25,7 @@ def transform_curr_tide_response(resp, spot):
 
     # Loop through all tides to find prev and next
     for tide in resp_data:
-        tide_time = datetime.fromisoformat(tide['DateTime'])
+        tide_time = parse_iso_flexible(tide['DateTime'])  # Fix for bug with invalid iso formats
         if tide_time <= now:
             prev_tide = {
                 "type": tide['EventType'],

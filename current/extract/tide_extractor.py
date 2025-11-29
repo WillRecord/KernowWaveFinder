@@ -11,7 +11,7 @@ def build_curr_tide_params(spot):
 def extract_current_tide_data(spot_id):
     logging.info("Extracting current tide data.")
     try:
-        url = "https://admiraltyapi.azure-api.net/uktidalapi/api/V1/Stations/0546A/TidalEvents?duration=1"
+        url = "https://admiraltyapi.azure-api.net/uktidalapi/api/V1/Stations/0546A/TidalEvents?duration=6"
         headers = {
             'Cache-Control': 'no-cache',
             'Ocp-Apim-Subscription-Key': API_KEY,
